@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 use std::fs;
+use std::io::{self, Read};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -64,7 +65,8 @@ fn eval(term: Term) -> Val {
     
 // The main function wrapper around [`crate::program`].
 fn main() {
-    let program: String = fs::read_to_string("./examples/hello.json").unwrap();
+    let mut program = String::new();
+    io::stdin().lock().read_to_string(&mut program).unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
     let term = program.expression;
     eval(term);
