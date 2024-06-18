@@ -5,7 +5,6 @@ use lalrpop_util::lalrpop_mod;
 use miette::IntoDiagnostic;
 use owo_colors::OwoColorize;
 
-
 // The lalrpop module, it does generate the parser and lexer
 // for the language.
 lalrpop_mod! {

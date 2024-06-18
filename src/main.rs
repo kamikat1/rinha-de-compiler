@@ -1,16 +1,15 @@
 #![allow(unused)]
 
+use serde::Deserialize;
 use std::fs;
 use std::io::{self, Read};
-use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct File {
     name: String,
     expression: Term,
-    //location: 
+    //location:
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct Int {
@@ -38,7 +37,6 @@ pub struct Binary {
 pub enum BinaryOp {
     Add,
     Sub,
-
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,11 +44,10 @@ pub enum BinaryOp {
 pub enum Term {
     Int(Int),
     Str(Str),
-//  #[serde(alias = "Print")]
+    //  #[serde(alias = "Print")]
     Print(Print),
     Binary(Binary),
 }
-
 
 #[derive(Debug)]
 pub enum Val {
@@ -59,7 +56,6 @@ pub enum Val {
     Bool(bool),
     Str(String),
 }
-
 
 fn eval(term: Term) -> Val {
     match term {
@@ -74,29 +70,30 @@ fn eval(term: Term) -> Val {
                 _ => panic!("Value not supported."),
             };
             Val::Void
-        },
+        }
 
-        Term::Binary(bin) => {
-            match bin.op {
-                BinaryOp::Add => {
-                    let lhs = eval(*bin.lhs);
-                    let rhs = eval(*bin.rhs);
+        Term::Binary(bin) => match bin.op {
+            BinaryOp::Add => {
+                let lhs = eval(*bin.lhs);
+                let rhs = eval(*bin.rhs);
 
-                    match (lhs, rhs) {
-                        (Val::Int(a), Val::Int(b)) => Val::Int(a + b),
-                         _ => panic!("Invalid operator used."),
-                    }
-                },
-                    
-                BinaryOp::Sub => {
-                    let lhs = eval(*bin.lhs);
-                    let rhs = eval(*bin.rhs);
+                match (lhs, rhs) {
+                    (Val::Int(i), Val::Int(j)) => Val::Int(i + j),
+                    (Val::Str(s), Val::Int(i)) => Val::Str(format!("{}{}", s, i)),
+                    (Val::Int(i), Val::Str(s)) => Val::Str(format!("{}{}", i, s)),
+                    (Val::Str(s), Val::Str(t)) => Val::Str(format!("{}{}", s, t)),
+                    _ => panic!("Invalid operator used."),
+                }
+            }
 
-                    match (lhs, rhs) {
-                        (Val::Int(a), Val::Int(b)) => Val::Int(a - b),
-                        _ => panic!("Invalid operator used."),
-                    }
-                },
+            BinaryOp::Sub => {
+                let lhs = eval(*bin.lhs);
+                let rhs = eval(*bin.rhs);
+
+                match (lhs, rhs) {
+                    (Val::Int(a), Val::Int(b)) => Val::Int(a - b),
+                    _ => panic!("Invalid operator used."),
+                }
             }
         },
     }
