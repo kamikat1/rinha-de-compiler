@@ -34,6 +34,11 @@ pub struct Binary {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Bool {
+    value: bool,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -47,7 +52,10 @@ pub enum Term {
     //  #[serde(alias = "Print")]
     Print(Print),
     Binary(Binary),
+    Bool(Bool),
+    If(If),
 }
+
 
 #[derive(Debug)]
 pub enum Val {
@@ -57,10 +65,30 @@ pub enum Val {
     Str(String),
 }
 
+#[derive(Debug, Deserialize)]
+pub struct If {
+    condition: Box<Term>,
+    then: Box<Term>,
+    otherwise: Box<Term>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Parameter {
+    text: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Let {
+    name: Parameter,
+    value: Box<Term>,
+    next: Box<Term>,
+}
+
 fn eval(term: Term) -> Val {
     match term {
         Term::Int(number) => Val::Int(number.value),
         Term::Str(str) => Val::Str(str.value),
+        Term::Bool(bool) => Val::Bool(bool.value),
         Term::Print(print) => {
             let val = eval(*print.value);
             match val {
@@ -95,6 +123,12 @@ fn eval(term: Term) -> Val {
                     _ => panic!("Invalid operator used."),
                 }
             }
+        },
+
+        Term::If(iff) => match eval(*iff.condition) {
+            Val::Bool(true) => eval(*iff.then),
+            Val::Bool(false) => eval(*iff.otherwise),
+            _ => panic!("Condition in If statement must be a boolean."),
         },
     }
 }
