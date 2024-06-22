@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Read};
 
@@ -54,10 +55,12 @@ pub enum Term {
     Binary(Binary),
     Bool(Bool),
     If(If),
+    Let(Let),
+    Var(Var),
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Val {
     Void,
     Int(i32),
@@ -84,17 +87,24 @@ pub struct Let {
     next: Box<Term>,
 }
 
-fn eval(term: Term) -> Val {
+#[derive(Debug, Deserialize)]
+pub struct Var {
+    text: String,
+    
+}
+
+pub type Scope = HashMap<String, Val>;
+fn eval(term: Term, mut scope: &mut Scope) -> Val {
     match term {
         Term::Int(number) => Val::Int(number.value),
         Term::Str(str) => Val::Str(str.value),
         Term::Bool(bool) => Val::Bool(bool.value),
         Term::Print(print) => {
-            let val = eval(*print.value);
+            let val = eval(*print.value, scope);
             match val {
-                Val::Int(i) => print!("{i}"),
-                Val::Bool(b) => print!("{b}"),
-                Val::Str(s) => print!("{s}"),
+                Val::Int(i) => print!("{}", i),
+                Val::Bool(b) => print!("{}", b),
+                Val::Str(s) => print!("{}", s),
                 _ => panic!("Value not supported."),
             };
             Val::Void
@@ -102,8 +112,8 @@ fn eval(term: Term) -> Val {
 
         Term::Binary(bin) => match bin.op {
             BinaryOp::Add => {
-                let lhs = eval(*bin.lhs);
-                let rhs = eval(*bin.rhs);
+                let lhs = eval(*bin.lhs, scope);
+                let rhs = eval(*bin.rhs, scope);
 
                 match (lhs, rhs) {
                     (Val::Int(i), Val::Int(j)) => Val::Int(i + j),
@@ -115,8 +125,8 @@ fn eval(term: Term) -> Val {
             }
 
             BinaryOp::Sub => {
-                let lhs = eval(*bin.lhs);
-                let rhs = eval(*bin.rhs);
+                let lhs = eval(*bin.lhs, scope);
+                let rhs = eval(*bin.rhs, scope);
 
                 match (lhs, rhs) {
                     (Val::Int(a), Val::Int(b)) => Val::Int(a - b),
@@ -125,10 +135,26 @@ fn eval(term: Term) -> Val {
             }
         },
 
-        Term::If(iff) => match eval(*iff.condition) {
-            Val::Bool(true) => eval(*iff.then),
-            Val::Bool(false) => eval(*iff.otherwise),
+        Term::If(iff) => match eval(*iff.condition, scope) {
+            Val::Bool(true) => eval(*iff.then, scope),
+            Val::Bool(false) => eval(*iff.otherwise, scope),
             _ => panic!("Condition in If statement must be a boolean."),
+        },
+
+        Term::Let(lett) => {
+            let name = lett.name.text;
+            let value = eval(*lett.value, scope);
+            scope.insert(name, value);
+
+            eval(*lett.next, scope)
+        },
+
+        Term::Var(varr) => {
+            match scope.get(&varr.text) {
+                Some(val) => val.clone(),
+                None => panic!("Variable not found.")
+                
+            }
         },
     }
 }
@@ -139,12 +165,9 @@ fn main() {
     io::stdin().lock().read_to_string(&mut program).unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
     let term = program.expression;
-    eval(term);
+    let mut scope = HashMap::new();
+    eval(term, &mut scope);
     // println!("{program:?}");
     // Avoid printing print `Error: ` before the error message
     // to maintain the language beauty!
-    //if let Err(e) = rinha::program() {
-    //    eprintln!("{e:?}");
-    //    std::process::exit(1);
-    //}
 }
